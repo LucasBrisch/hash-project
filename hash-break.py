@@ -1,104 +1,96 @@
 # Trabalho individual de Lucas Brisch Zanlorenzi 
 
-import hashlib
-import json
-import os
 import time
-import itertools
 
-USERS_FILE = 'users.json'
-CHARACTER_SET = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-PASSWORD_LENGTH = 4
+import random
+import json
+import hashlib
 
-def hash_password(password):
-    return hashlib.sha256(password.encode('utf-8')).hexdigest()
+character = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
+PASSWORD_SIZE = 4
 
-def load_users():
-    if os.path.exists(USERS_FILE):
-        try:
-            with open(USERS_FILE, 'r', encoding='utf-8') as file:
-                return json.load(file)
-        except json.JSONDecodeError:
-            print(f"Aviso: O arquivo '{USERS_FILE}' está vazio ou corrompido.")
-            return {}
-    print(f"Erro: Arquivo '{USERS_FILE}' não encontrado.")
-    return {}
 
-def brute_force(target_hash, character_set, length):
-    start = time.perf_counter()
-    
-    for attempt in itertools.product(character_set, repeat=length):
-        password = ''.join(attempt)
-        hashed = hash_password(password)
-        
-        if hashed == target_hash:
-            end = time.perf_counter()
-            return password, end - start
 
-    end = time.perf_counter()
-    return None, end - start
+def get_users ():
+    with open ('users.json', "r") as file:
+            users = json.loads(file.read())
+            return users
 
-def run_attack():
-    print("=== Força Bruta ===")
-    users = load_users()
-
-    if not users:
-        print("Nenhum usuário encontrado. Cadastre pelo menos um usuário.")
-        return
-
+def get_targets ():
+    users = get_users()
     targets = []
-    for username, password_hash in list(users.items())[:4]:
-        targets.append({
-            'username': username,
-            'hash': password_hash
-        })
-
-    if len(targets) < 4:
-        print("Poucos usuários cadastrados. Adicione mais usuários.")
-        return
-
-    print(f"Tentando quebrar senhas...")
-
-    total_time = 0
+    
+    if len(users) == 0:
+        print ("No users were found at the database")
+        exit()
+    
+    count = min(4, len(users))
+    
+    while len(targets) < count: 
+        user = random.choice(users)
+        
+        if user not in targets:
+            targets.append(user) 
+            print (f"User {user['username']} added to the target list...")
+            time.sleep(0.5)
+            
+    return targets
+            
+def brute_force ():
+    targets_to_attack = get_targets() 
     results = []
-
-    for target in targets:
-        username = target['username']
-        target_hash = target['hash']
-
-        print(f"Quebrando senha do usuário: '{username}'...")
-
-        found_password, time_taken = brute_force(target_hash, CHARACTER_SET, PASSWORD_LENGTH)
-        total_time += time_taken
-
-        if found_password:
-            print(f"  Senha encontrada: '{found_password}' em {time_taken:.6f} segundos.")
-            results.append({
-                'username': username,
-                'hash': target_hash,
-                'password': found_password,
-                'time': time_taken
-            })
-        else:
-            print(f"  Senha NÃO encontrada. Tempo decorrido: {time_taken:.6f} segundos.")
-            results.append({
-                'username': username,
-                'hash': target_hash,
-                'password': "Não encontrada",
-                'time': time_taken
-            })
-
-    print("=== Relatório Final ===")
-    print(f"Tempo total: {total_time:.6f} segundos.")
+    total_time_start = time.perf_counter()
+    print (f"Getting ready to attack {len(targets_to_attack)} users...")
+    for current_user_target in targets_to_attack:
+        print(f"Attacking user {current_user_target['username']}")
+        found_password = False
+        user_time_start = time.perf_counter()
+        for a in character:
+            if found_password: break
+            for b in character:
+                if found_password: break
+                for c in character:
+                    if found_password: break
+                    for d in character:
+                        password_attempt = a + b + c + d
+                        if try_login (password_attempt, current_user_target['password'] ): 
+                            user_time_end = time.perf_counter()
+                            user_time_taken = user_time_end - user_time_start
+                            print(f"Password found for {current_user_target['username']}: {password_attempt} in {user_time_taken:.2f} seconds")
+                            results.append({"username": current_user_target["username"], "password": password_attempt, "time_taken": user_time_taken})
+                            found_password = True
+                            break 
+        if not found_password:
+            print(f"No password found for {current_user_target['username']}")
+    
+    
+    
+    print("--- Results ---")
     if results:
-        print(f"Tempo médio por senha: {total_time / len(results):.6f} segundos.")
+        total_time_end = time.perf_counter()
+        total_time = total_time_end - total_time_start
+        for result in results:
+            print(f"Username: {result['username']}, Found password: {result['password']}, time: {result['time_taken']:.2f} Seconds")
+            
+        print (f"total time taken: {total_time:.2f} seconds")
+    else:
+        print("No passwords were found")
 
-    print("\nResumo das Quebras:")
-    print("{:<12} {:<64} {:<18} {:<20}".format("Usuário", "Hash", "Senha Descoberta", "Tempo (s)"))
-    print("-" * 120)
-    for result in results:
-        short_hash = result['hash'][:16]
-        print(f"{result['username']:<12} {short_hash:<64} {result['password']:<18} {result['time']:.6f}")
+                            
+                            
+                        
+           
+def try_login (password_to_try, actual_hashed_password): 
+    
+    if hash_pass(password_to_try) == actual_hashed_password: 
+        return True 
+    return False 
+  
+    
+                    
+def hash_pass (password):
+    hashed_pass = hashlib.sha256(password.encode('utf-8')).hexdigest()
+    return hashed_pass
 
-if __name__ == "__main__":
-    run_attack()
+
+brute_force()
